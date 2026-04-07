@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STAT 252 — In-Class Experiments</title>
+<style>
+  :root {
+    /* Cal Poly palette */
+    --cp-green: #154734;
+    --cp-green-dark: #0d2e21;
+    --cp-green-light: #1f6b4d;
+    --cp-gold: #BD8B13;
+    --cp-gold-light: #e0a830;
+    --cp-gold-soft: #fdf6e3;
+
+    --bg: #f4f5f3;
+    --card: #ffffff;
+    --ink: #1a2420;
+    --muted: #6b7570;
+    --border: #d8dcd6;
+    --good: #1f6b4d;
+    --bad: #a82c1f;
+    --shadow: 0 4px 20px rgba(21, 71, 52, 0.08);
+    --shadow-strong: 0 8px 30px rgba(21, 71, 52, 0.15);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  /* Header banner */
+  .banner {
+    background: linear-gradient(135deg, var(--cp-green) 0%, var(--cp-green-light) 100%);
+    color: white;
+    padding: 24px 20px 28px;
+    border-bottom: 5px solid var(--cp-gold);
+    position: relative;
+    overflow: hidden;
+  }
+  .banner::before {
+    content: "";
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(189,139,19,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .banner-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .wordmark {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cp-gold-light);
+    margin-bottom: 6px;
+  }
+  .banner h1 {
+    font-size: 26px;
+    margin: 0 0 4px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .banner .subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--cp-gold);
+  }
+  .card h2 {
+    font-size: 19px;
+    margin: 0 0 14px;
+    color: var(--cp-green);
+    font-weight: 700;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    margin-top: 14px;
+    color: var(--cp-green);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  input[type="text"], select {
+    width: 100%;
+    padding: 13px 14px;
+    font-size: 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type="text"]:focus, select:focus {
+    outline: none;
+    border-color: var(--cp-green);
+    box-shadow: 0 0 0 3px rgba(21, 71, 52, 0.12);
+  }
+  button {
+    background: var(--cp-green);
+    color: white;
+    border: none;
+    padding: 15px 22px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 18px;
+    font-family: inherit;
+    letter-spacing: 0.2px;
+    transition: transform 0.08s, background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(21, 71, 52, 0.2);
+  }
+  button:hover { background: var(--cp-green-dark); box-shadow: 0 4px 14px rgba(21, 71, 52, 0.28); }
+  button:active { transform: translateY(1px); }
+  button:disabled { background: #aaa; cursor: not-allowed; box-shadow: none; }
+  button.gold {
+    background: var(--cp-gold);
+    box-shadow: 0 2px 8px rgba(189, 139, 19, 0.3);
+  }
+  button.gold:hover { background: #a07310; }
+  button.secondary {
+    background: white;
+    color: var(--cp-green);
+    border: 2px solid var(--cp-green);
+    box-shadow: none;
+  }
+  .hidden { display: none !important; }
+
+  .group-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    border: 2px solid;
+  }
+  .group-A { background: #e8f1ed; color: var(--cp-green); border-color: var(--cp-green); }
+  .group-B { background: var(--cp-gold-soft); color: #7a5a0c; border-color: var(--cp-gold); }
+
+  .stim-box {
+    background: linear-gradient(135deg, #1a2420 0%, #0d2e21 100%);
+    color: white;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-align: center;
+    padding: 40px 16px;
+    border-radius: 12px;
+    margin: 16px 0;
+    user-select: none;
+    border: 3px solid var(--cp-gold);
+    box-shadow: var(--shadow-strong);
+  }
+  .stim-box.chunked {
+    font-size: 30px;
+    letter-spacing: 4px;
+  }
+  .timer {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 600;
+  }
+  .timer-big {
+    font-size: 18px;
+    color: var(--cp-gold);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .scenario {
+    background: var(--cp-gold-soft);
+    border-left: 5px solid var(--cp-gold);
+    padding: 16px;
+    border-radius: 8px;
+    margin: 14px 0;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .choice-row { display: flex; gap: 12px; margin-top: 14px; }
+  .choice-row button { margin-top: 0; }
+  .yes { background: var(--good); box-shadow: 0 2px 8px rgba(31, 107, 77, 0.3); }
+  .yes:hover { background: #15553c; }
+  .no { background: var(--bad); box-shadow: 0 2px 8px rgba(168, 44, 31, 0.3); }
+  .no:hover { background: #831f15; }
+  .status {
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 14px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .status.success {
+    background: #e8f1ed;
+    color: var(--cp-green);
+    border: 2px solid var(--cp-green-light);
+  }
+  .status.error { background: #fce8e6; color: var(--bad); border: 2px solid var(--bad); }
+  .reaction-btn {
+    background: var(--bad);
+    color: white;
+    font-size: 24px;
+    font-weight: 800;
+    padding: 70px 20px;
+    border-radius: 14px;
+    margin-top: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: var(--shadow-strong);
+    transition: background 0.05s;
+  }
+  .reaction-btn.go { background: var(--good); }
+  .small { font-size: 13px; color: var(--muted); margin-top: 10px; text-align: center; }
+  ol { padding-left: 20px; }
+  ol li { margin-bottom: 6px; }
+  .score-display {
+    font-size: 17px;
+    padding: 12px 0;
+  }
+  .score-display strong { color: var(--cp-green); }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="banner-inner">
+    <div class="wordmark">Cal Poly · Statistics</div>
+    <h1>STAT 252 — In-Class Experiments</h1>
+    <div class="subtitle">Live data collection for statistical inference</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ============ STEP 1: SESSION INFO ============ -->
+<div class="card" id="sessionCard">
+  <h2>Step 1 — Session Info</h2>
+  <label for="sessionCode">Class session code (your instructor will tell you)</label>
+  <input type="text" id="sessionCode" placeholder="e.g., spring2026-mwf10" autocomplete="off" />
+  <label for="experimentSelect">Which experiment are you doing?</label>
+  <select id="experimentSelect">
+    <option value="">— Select —</option>
+    <option value="reaction">Experiment 1: Reaction Time (Two Means)</option>
+    <option value="memory">Experiment 2: Memory Recall (Paired)</option>
+    <option value="framing">Experiment 3: Framing Effect (Two Proportions)</option>
+  </select>
+  <button id="startBtn">Start →</button>
+</div>
+
+<!-- ============ EXPERIMENT 1: REACTION TIME ============ -->
+<div class="card hidden" id="exp1Card">
+  <h2>Experiment 1 — Reaction Time</h2>
+  <div id="exp1Group"></div>
+  <div id="exp1Instructions">
+    <p><strong>Your task:</strong> When the red box turns <span style="color:var(--good);font-weight:800">GREEN</span>, tap it as fast as you can. You'll do <strong>5 trials</strong>. We'll record your average.</p>
+    <p class="small" id="exp1Condition"></p>
+    <button id="exp1StartBtn">Begin Trial 1 →</button>
+  </div>
+  <div id="exp1Trial" class="hidden">
+    <div class="timer" id="exp1TrialNum">Trial 1 of 5</div>
+    <div class="reaction-btn" id="reactionBtn">Wait for green…</div>
+    <div class="small" id="exp1LastTime"></div>
+  </div>
+  <div id="exp1Done" class="hidden">
+    <p class="score-display">Done! Your average reaction time: <strong><span id="exp1Avg"></span> ms</strong></p>
+    <button id="exp1SubmitBtn" class="gold">Submit My Data ✓</button>
+  </div>
+  <div id="exp1Status"></div>
+</div>
+
+<!-- ============ EXPERIMENT 2: MEMORY ============ -->
+<div class="card hidden" id="exp2Card">
+  <h2>Experiment 2 — Memory Recall</h2>
+  <div id="exp2Intro">
+    <p>You'll see <strong>14 random digits</strong> for <strong>6 seconds</strong>. Try to remember them in order, then type what you remember. You'll do this <strong>twice</strong>.</p>
+    <p class="small">Round 1 will feel hard. That's the point.</p>
+    <button id="exp2StartBtn">Start Round 1 →</button>
+  </div>
+
+  <div id="exp2Round1Show" class="hidden">
+    <div class="timer-big" id="exp2Timer1">Memorize! 6s</div>
+    <div class="stim-box" id="exp2Digits1"></div>
+  </div>
+  <div id="exp2Round1Recall" class="hidden">
+    <label for="exp2Recall1">Type the digits you remember (in order, no spaces):</label>
+    <input type="text" id="exp2Recall1" inputmode="numeric" autocomplete="off" />
+    <button id="exp2Submit1">Submit Round 1 →</button>
+  </div>
+
+  <div id="exp2TrickIntro" class="hidden">
+    <div class="scenario">
+      <strong>The chunking trick:</strong> Your brain handles ~4 chunks much better than 14 separate items. Instead of remembering <code>84729156302517</code> as 14 digits, group them into chunks of 3–4: <code>847 — 291 — 563 — 025 — 17</code>. That's just 5 chunks. Try it on the next round — the digits will already be grouped on screen for you.
+    </div>
+    <button id="exp2StartBtn2" class="gold">Start Round 2 (use the trick!) →</button>
+  </div>
+
+  <div id="exp2Round2Show" class="hidden">
+    <div class="timer-big" id="exp2Timer2">Memorize! 6s</div>
+    <div class="stim-box chunked" id="exp2Digits2"></div>
+  </div>
+  <div id="exp2Round2Recall" class="hidden">
+    <label for="exp2Recall2">Type the digits you remember (in order, no spaces):</label>
+    <input type="text" id="exp2Recall2" inputmode="numeric" autocomplete="off" />
+    <button id="exp2Submit2">Submit Round 2 →</button>
+  </div>
+
+  <div id="exp2Done" class="hidden">
+    <p class="score-display">Round 1 (no trick): <strong><span id="exp2Score1"></span> / 14</strong></p>
+    <p class="score-display">Round 2 (with chunking): <strong><span id="exp2Score2"></span> / 14</strong></p>
+    <button id="exp2SubmitBtn" class="gold">Submit My Data ✓</button>
+  </div>
+  <div id="exp2Status"></div>
+</div>
+
+<!-- ============ EXPERIMENT 3: FRAMING ============ -->
+<div class="card hidden" id="exp3Card">
+  <h2>Experiment 3 — Medical Decision</h2>
+  <div id="exp3Group"></div>
+  <div id="exp3Question">
+    <div class="scenario" id="exp3Scenario"></div>
+    <p><strong>Would you recommend that the patient undergo this treatment?</strong></p>
+    <div class="choice-row">
+      <button class="yes" id="exp3Yes">YES</button>
+      <button class="no" id="exp3No">NO</button>
+    </div>
+  </div>
+  <div id="exp3Status"></div>
+</div>
+
+<div id="thanks" class="card hidden">
+  <h2>Thanks! ✓</h2>
+  <p>Your data has been recorded. Your instructor will pull it into R during class.</p>
+  <button class="secondary" onclick="location.reload()">Start Over</button>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIG — paste your Apps Script web app URL here after setup
+// ============================================================
+const ENDPOINT = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+// ============================================================
+// HELPERS
+// ============================================================
+function $(id) { return document.getElementById(id); }
+function show(id) { $(id).classList.remove("hidden"); }
+function hide(id) { $(id).classList.add("hidden"); }
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randomDigits(n) {
+  let s = "";
+  for (let i = 0; i < n; i++) s += randInt(0, 9);
+  return s;
+}
+function chunkDigits(s) {
+  // Group as 3-3-3-3-2 for a 14-digit string
+  return s.slice(0,3) + " " + s.slice(3,6) + " " + s.slice(6,9) + " " + s.slice(9,12) + " " + s.slice(12,14);
+}
+function scoreRecall(input, target) {
+  let score = 0;
+  for (let i = 0; i < target.length; i++) {
+    if (input[i] === target[i]) score++;
+  }
+  return score;
+}
+
+async function postData(payload) {
+  payload.timestamp = new Date().toISOString();
+  payload.session = $("sessionCode").value.trim() || "no-session";
+  try {
+    await fetch(ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+function showStatus(elId, msg, ok) {
+  const el = $(elId);
+  el.innerHTML = `<div class="status ${ok ? "success" : "error"}">${msg}</div>`;
+}
+
+// ============================================================
+// STEP 1 — Routing
+// ============================================================
+$("startBtn").addEventListener("click", () => {
+  const code = $("sessionCode").value.trim();
+  const exp = $("experimentSelect").value;
+  if (!code) { alert("Please enter the session code."); return; }
+  if (!exp) { alert("Please pick an experiment."); return; }
+  hide("sessionCard");
+  if (exp === "reaction") initExp1();
+  if (exp === "memory") initExp2();
+  if (exp === "framing") initExp3();
+});
+
+// ============================================================
+// EXPERIMENT 1 — REACTION TIME (two means)
+// Random assignment: music vs silence
+// ============================================================
+let exp1State = { group: "", trial: 0, times: [], waiting: false, startTime: 0 };
+
+function initExp1() {
+  show("exp1Card");
+  exp1State.group = Math.random() < 0.5 ? "A" : "B";
+  const groupName = exp1State.group === "A" ? "MUSIC" : "SILENCE";
+  $("exp1Group").innerHTML = `<span class="group-badge group-${exp1State.group}">Group ${exp1State.group}: ${groupName}</span>`;
+  $("exp1Condition").textContent = exp1State.group === "A"
+    ? "Put on headphones and play music you enjoy at a comfortable volume before you begin."
+    : "Make sure your environment is silent — no music, no headphones — before you begin.";
+}
+
+$("exp1StartBtn").addEventListener("click", () => {
+  hide("exp1Instructions");
+  show("exp1Trial");
+  scheduleReactionTrial();
+});
+
+function scheduleReactionTrial() {
+  exp1State.trial++;
+  $("exp1TrialNum").textContent = `Trial ${exp1State.trial} of 5`;
+  const btn = $("reactionBtn");
+  btn.className = "reaction-btn";
+  btn.textContent = "Wait for green…";
+  exp1State.waiting = true;
+  const delay = randInt(1500, 4000);
+  setTimeout(() => {
+    if (!exp1State.waiting) return;
+    btn.className = "reaction-btn go";
+    btn.textContent = "TAP NOW!";
+    exp1State.startTime = performance.now();
+    exp1State.waiting = false;
+  }, delay);
+}
+
+$("reactionBtn").addEventListener("click", () => {
+  if (exp1State.waiting) {
+    exp1State.waiting = false;
+    $("exp1LastTime").textContent = "Too early! Wait for green. Restarting trial…";
+    setTimeout(() => { exp1State.trial--; scheduleReactionTrial(); }, 1200);
+    return;
+  }
+  if (exp1State.startTime === 0) return;
+  const rt = performance.now() - exp1State.startTime;
+  exp1State.times.push(rt);
+  exp1State.startTime = 0;
+  $("exp1LastTime").textContent = `Last reaction: ${Math.round(rt)} ms`;
+  if (exp1State.trial >= 5) {
+    setTimeout(() => {
+      hide("exp1Trial");
+      show("exp1Done");
+      const avg = exp1State.times.reduce((a, b) => a + b, 0) / exp1State.times.length;
+      $("exp1Avg").textContent = Math.round(avg);
+      exp1State.avg = avg;
+    }, 600);
+  } else {
+    setTimeout(scheduleReactionTrial, 800);
+  }
+});
+
+$("exp1SubmitBtn").addEventListener("click", async () => {
+  $("exp1SubmitBtn").disabled = true;
+  const ok = await postData({
+    experiment: "reaction",
+    group: exp1State.group === "A" ? "music" : "silence",
+    avg_rt_ms: Math.round(exp1State.avg),
+    trial1_ms: Math.round(exp1State.times[0]),
+    trial2_ms: Math.round(exp1State.times[1]),
+    trial3_ms: Math.round(exp1State.times[2]),
+    trial4_ms: Math.round(exp1State.times[3]),
+    trial5_ms: Math.round(exp1State.times[4])
+  });
+  showStatus("exp1Status", ok ? "Submitted! ✓" : "Submitted (check with instructor).", true);
+  setTimeout(() => { hide("exp1Card"); show("thanks"); }, 1200);
+});
+
+// ============================================================
+// EXPERIMENT 2 — MEMORY (paired t)
+// 14 digits, 6 seconds, round 2 visually pre-chunked
+// ============================================================
+const N_DIGITS = 14;
+const VIEW_SECS = 6;
+let exp2State = { digits1: "", digits2: "", score1: 0, score2: 0 };
+
+function initExp2() {
+  show("exp2Card");
+}
+
+function runMemoryRound(digitsId, timerId, showId, recallId, displayText, callback) {
+  $(digitsId).textContent = displayText;
+  show(showId);
+  let secs = VIEW_SECS;
+  $(timerId).textContent = `Memorize! ${secs}s`;
+  const interval = setInterval(() => {
+    secs--;
+    $(timerId).textContent = `Memorize! ${secs}s`;
+    if (secs <= 0) {
+      clearInterval(interval);
+      hide(showId);
+      show(recallId);
+      callback();
+    }
+  }, 1000);
+}
+
+$("exp2StartBtn").addEventListener("click", () => {
+  hide("exp2Intro");
+  exp2State.digits1 = randomDigits(N_DIGITS);
+  // Round 1: shown raw, no chunking
+  runMemoryRound("exp2Digits1", "exp2Timer1", "exp2Round1Show", "exp2Round1Recall",
+                 exp2State.digits1, () => { $("exp2Recall1").focus(); });
+});
+
+$("exp2Submit1").addEventListener("click", () => {
+  const input = $("exp2Recall1").value.replace(/\D/g, "");
+  exp2State.score1 = scoreRecall(input, exp2State.digits1);
+  hide("exp2Round1Recall");
+  show("exp2TrickIntro");
+});
+
+$("exp2StartBtn2").addEventListener("click", () => {
+  hide("exp2TrickIntro");
+  exp2State.digits2 = randomDigits(N_DIGITS);
+  // Round 2: shown pre-chunked with spaces
+  runMemoryRound("exp2Digits2", "exp2Timer2", "exp2Round2Show", "exp2Round2Recall",
+                 chunkDigits(exp2State.digits2), () => { $("exp2Recall2").focus(); });
+});
+
+$("exp2Submit2").addEventListener("click", () => {
+  const input = $("exp2Recall2").value.replace(/\D/g, "");
+  exp2State.score2 = scoreRecall(input, exp2State.digits2);
+  hide("exp2Round2Recall");
+  show("exp2Done");
+  $("exp2Score1").textContent = exp2State.score1;
+  $("exp2Score2").textContent = exp2State.score2;
+});
+
+$("exp2SubmitBtn").addEventListener("click", async () => {
+  $("exp2SubmitBtn").disabled = true;
+  const ok = await postData({
+    experiment: "memory",
+    score_before: exp2State.score1,
+    score_after: exp2State.score2,
+    difference: exp2State.score2 - exp2State.score1,
+    digits_round1: exp2State.digits1,
+    digits_round2: exp2State.digits2
+  });
+  showStatus("exp2Status", ok ? "Submitted! ✓" : "Submitted (check with instructor).", true);
+  setTimeout(() => { hide("exp2Card"); show("thanks"); }, 1200);
+});
+
+// ============================================================
+// EXPERIMENT 3 — FRAMING (two proportions)
+// ============================================================
+let exp3State = { group: "" };
+
+function initExp3() {
+  show("exp3Card");
+  exp3State.group = Math.random() < 0.5 ? "A" : "B";
+  const groupName = exp3State.group === "A" ? "POSITIVE FRAME" : "NEGATIVE FRAME";
+  $("exp3Group").innerHTML = `<span class="group-badge group-${exp3State.group}">Group ${exp3State.group}: ${groupName}</span>`;
+  $("exp3Scenario").innerHTML = exp3State.group === "A"
+    ? "A patient has a serious illness. A new surgical treatment is available. Of every 100 patients who undergo this surgery, <strong>90 survive</strong> the first year."
+    : "A patient has a serious illness. A new surgical treatment is available. Of every 100 patients who undergo this surgery, <strong>10 die</strong> within the first year.";
+}
+
+async function submitExp3(choice) {
+  $("exp3Yes").disabled = true;
+  $("exp3No").disabled = true;
+  const ok = await postData({
+    experiment: "framing",
+    group: exp3State.group === "A" ? "positive" : "negative",
+    choice: choice
+  });
+  showStatus("exp3Status", ok ? "Submitted! ✓" : "Submitted (check with instructor).", true);
+  setTimeout(() => { hide("exp3Card"); show("thanks"); }, 1000);
+}
+
+$("exp3Yes").addEventListener("click", () => submitExp3("yes"));
+$("exp3No").addEventListener("click", () => submitExp3("no"));
+</script>
+</body>
+</html>

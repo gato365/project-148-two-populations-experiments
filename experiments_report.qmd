@@ -1,0 +1,356 @@
+---
+title: "STAT 252 — In-Class Experiments Report"
+author: "Cal Poly San Luis Obispo"
+date: today
+format:
+  docx:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    fig-width: 6
+    fig-height: 3.8
+execute:
+  echo: false
+  warning: false
+  message: false
+params:
+  sheet_id: "PASTE_YOUR_GOOGLE_SHEET_ID_HERE"
+  session: "spring2026-mwf10"
+  show_reaction: true
+  show_memory: true
+  show_framing: true
+---
+
+```{r setup}
+# ---- Packages ----
+library(googlesheets4)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(scales)
+
+# ---- Auth ----
+# First time you render: a browser window will open. Sign in with the Google
+# account that owns the sheet, allow access. After that, the token is cached
+# and you won't be prompted again.
+gs4_auth(email = TRUE)  # uses the most recently authenticated email
+
+# ---- Helpers ----
+read_tab <- function(tab) {
+  tryCatch(
+    read_sheet(params$sheet_id, sheet = tab) |>
+      filter(session == params$session),
+    error = function(e) NULL
+  )
+}
+
+fmt_p <- function(p) {
+  if (is.na(p)) return("NA")
+  if (p < 0.001) return("< 0.001")
+  formatC(p, format = "f", digits = 4)
+}
+
+# Section heading helper
+section_check <- function(df, name) {
+  if (is.null(df) || nrow(df) == 0) {
+    cat(sprintf("> *No data found for the '%s' experiment in session `%s`. Skipping.*\n\n",
+                name, params$session))
+    return(FALSE)
+  }
+  TRUE
+}
+```
+
+```{r session-info}
+cat(sprintf("**Session code:** `%s`  \n", params$session))
+cat(sprintf("**Report generated:** %s\n", format(Sys.time(), "%B %d, %Y at %I:%M %p")))
+```
+
+# Experiment 1 — Two Population Means: Reaction Time
+
+```{r exp1-load}
+exp1 <- if (params$show_reaction) read_tab("reaction") else NULL
+exp1_ok <- section_check(exp1, "reaction")
+```
+
+```{r exp1-content, eval=exp1_ok, results='asis'}
+cat("## Design\n\n")
+cat("Each student was randomly assigned to one of two conditions: completing a 5-trial reaction-time task with **music** playing through headphones, or in **silence**. Their average reaction time across the 5 trials (in milliseconds) is the response.\n\n")
+cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
+cat("- **Sample**: The students in this class section who participated.\n")
+cat("- **Observational unit**: An individual student.\n")
+cat("- **Explanatory variable**: Listening condition (music vs. silence) — categorical, two levels.\n")
+cat("- **Response variable**: Average reaction time across 5 trials, in ms — quantitative.\n")
+cat("- **Parameter of interest**: $\\mu_{\\text{music}} - \\mu_{\\text{silence}}$, the difference in true mean reaction time between the two populations.\n\n")
+```
+
+```{r exp1-summary, eval=exp1_ok}
+exp1_clean <- exp1 |>
+  mutate(group = factor(group, levels = c("music", "silence")),
+         avg_rt_ms = as.numeric(avg_rt_ms))
+
+exp1_summary <- exp1_clean |>
+  group_by(group) |>
+  summarise(
+    n = n(),
+    mean_rt = round(mean(avg_rt_ms, na.rm = TRUE), 1),
+    sd_rt = round(sd(avg_rt_ms, na.rm = TRUE), 1),
+    median_rt = round(median(avg_rt_ms, na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+
+kable(exp1_summary,
+      col.names = c("Group", "n", "Mean RT (ms)", "SD (ms)", "Median (ms)"),
+      caption = "Summary statistics by group")
+```
+
+```{r exp1-plot, eval=exp1_ok}
+ggplot(exp1_clean, aes(x = group, y = avg_rt_ms, fill = group)) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, width = 0.5) +
+  geom_jitter(width = 0.12, size = 2.2, alpha = 0.75) +
+  scale_fill_manual(values = c("music" = "#2a6f97", "silence" = "#c0392b")) +
+  labs(x = "Listening condition", y = "Average reaction time (ms)",
+       title = "Reaction time by listening condition") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+```{r exp1-test, eval=exp1_ok, results='asis'}
+test1 <- t.test(avg_rt_ms ~ group, data = exp1_clean)
+
+cat("## Hypotheses\n\n")
+cat("$$H_0:\\ \\mu_{\\text{music}} - \\mu_{\\text{silence}} = 0 \\qquad H_a:\\ \\mu_{\\text{music}} - \\mu_{\\text{silence}} \\neq 0$$\n\n")
+
+cat("## Point estimate\n\n")
+pe <- diff(rev(test1$estimate))
+cat(sprintf("$\\bar{x}_{\\text{music}} - \\bar{x}_{\\text{silence}} = %.1f$ ms\n\n", -pe))
+
+cat("## Test results\n\n")
+res1 <- data.frame(
+  Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
+               "95% CI lower", "95% CI upper"),
+  Value = c(round(test1$statistic, 3),
+            round(test1$parameter, 2),
+            fmt_p(test1$p.value),
+            round(test1$conf.int[1], 2),
+            round(test1$conf.int[2], 2))
+)
+print(kable(res1))
+
+cat("\n\n## Interpretation\n\n")
+cat(sprintf("- The test statistic %.3f tells us how many standard errors the observed difference in sample means lies from zero.\n", test1$statistic))
+cat(sprintf("- The p-value of %s is the probability of seeing a difference at least this extreme if there were truly no effect of music on reaction time.\n", fmt_p(test1$p.value)))
+ci_includes_zero <- test1$conf.int[1] <= 0 & test1$conf.int[2] >= 0
+cat(sprintf("- We are 95%% confident that the true mean difference (music − silence) lies between %.1f ms and %.1f ms. ",
+            test1$conf.int[1], test1$conf.int[2]))
+if (ci_includes_zero) {
+  cat("Because **0 falls inside** this interval, the data are consistent with no real difference in mean reaction time between the two conditions.\n\n")
+} else {
+  cat("Because **0 does not fall inside** this interval, we have evidence that the two conditions produce different mean reaction times.\n\n")
+}
+```
+
+\newpage
+
+# Experiment 2 — Paired t: Memory Recall Before vs. After Chunking
+
+```{r exp2-load}
+exp2 <- if (params$show_memory) read_tab("memory") else NULL
+exp2_ok <- section_check(exp2, "memory")
+```
+
+```{r exp2-content, eval=exp2_ok, results='asis'}
+cat("## Design\n\n")
+cat("Each student was shown a string of 14 random digits for 6 seconds and asked to recall as many as possible in order (Round 1, *before*). They were then taught the **chunking** trick — grouping digits into sets of 3–4 — and shown a new 14-digit string, this time displayed pre-chunked on screen, under the same time constraint (Round 2, *after*). The response is each student's score (number of digits recalled in correct position out of 14) in each round.\n\n")
+cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
+cat("- **Sample**: The students in this class section who participated.\n")
+cat("- **Observational unit**: An individual student (each student contributes a *pair* of scores).\n")
+cat("- **Explanatory variable**: Round (before vs. after the chunking trick) — categorical, two levels, applied to the same student.\n")
+cat("- **Response variable**: Number of digits recalled correctly out of 14 — quantitative.\n")
+cat("- **Parameter of interest**: $\\mu_d$, the true mean of the within-student difference (after − before).\n\n")
+cat("Because each student contributes both measurements, we use a **paired t-test** on the differences rather than a two-sample test.\n\n")
+```
+
+```{r exp2-summary, eval=exp2_ok}
+exp2_clean <- exp2 |>
+  mutate(score_before = as.numeric(score_before),
+         score_after = as.numeric(score_after),
+         difference = score_after - score_before)
+
+exp2_summary <- data.frame(
+  Quantity = c("n (students)", "Mean (before)", "Mean (after)",
+               "Mean difference (after − before)", "SD of differences"),
+  Value = c(nrow(exp2_clean),
+            round(mean(exp2_clean$score_before), 2),
+            round(mean(exp2_clean$score_after), 2),
+            round(mean(exp2_clean$difference), 2),
+            round(sd(exp2_clean$difference), 2))
+)
+kable(exp2_summary, caption = "Summary statistics")
+```
+
+```{r exp2-plot, eval=exp2_ok}
+exp2_long <- exp2_clean |>
+  mutate(student = row_number()) |>
+  tidyr::pivot_longer(cols = c(score_before, score_after),
+                      names_to = "round", values_to = "score") |>
+  mutate(round = factor(round,
+                        levels = c("score_before", "score_after"),
+                        labels = c("Before", "After")))
+
+ggplot(exp2_long, aes(x = round, y = score, group = student)) +
+  geom_line(alpha = 0.4, color = "#6b6b6b") +
+  geom_point(aes(color = round), size = 2.5) +
+  scale_color_manual(values = c("Before" = "#c0392b", "After" = "#2d8a4e")) +
+  labs(x = "", y = "Digits recalled correctly (out of 14)",
+       title = "Within-student change after learning chunking") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+```{r exp2-test, eval=exp2_ok, results='asis'}
+test2 <- t.test(exp2_clean$score_after, exp2_clean$score_before, paired = TRUE)
+
+cat("## Hypotheses\n\n")
+cat("$$H_0:\\ \\mu_d = 0 \\qquad H_a:\\ \\mu_d \\neq 0$$\n\n")
+cat("where $\\mu_d$ is the true mean difference (after − before).\n\n")
+
+cat("## Point estimate\n\n")
+cat(sprintf("$\\bar{d} = %.2f$ digits\n\n", mean(exp2_clean$difference)))
+
+cat("## Test results\n\n")
+res2 <- data.frame(
+  Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
+               "95% CI lower", "95% CI upper"),
+  Value = c(round(test2$statistic, 3),
+            round(test2$parameter, 2),
+            fmt_p(test2$p.value),
+            round(test2$conf.int[1], 3),
+            round(test2$conf.int[2], 3))
+)
+print(kable(res2))
+
+cat("\n\n## Interpretation\n\n")
+cat(sprintf("- The test statistic %.3f tells us how many standard errors the mean within-student change lies from zero.\n", test2$statistic))
+cat(sprintf("- The p-value of %s is the probability of seeing a mean change at least this large in magnitude if chunking truly had no effect on recall.\n", fmt_p(test2$p.value)))
+ci_includes_zero2 <- test2$conf.int[1] <= 0 & test2$conf.int[2] >= 0
+cat(sprintf("- We are 95%% confident that the true mean change in score (after − before) lies between %.2f and %.2f digits. ",
+            test2$conf.int[1], test2$conf.int[2]))
+if (ci_includes_zero2) {
+  cat("Because **0 falls inside** this interval, the data are consistent with chunking having no effect on recall.\n\n")
+} else {
+  cat("Because **0 does not fall inside** this interval, we have evidence that chunking changes mean recall scores.\n\n")
+}
+```
+
+\newpage
+
+# Experiment 3 — Two Population Proportions: Framing Effect
+
+```{r exp3-load}
+exp3 <- if (params$show_framing) read_tab("framing") else NULL
+exp3_ok <- section_check(exp3, "framing")
+```
+
+```{r exp3-content, eval=exp3_ok, results='asis'}
+cat("## Design\n\n")
+cat("Each student was randomly assigned to read one of two versions of an identical medical scenario. The **positive frame** described the surgery as having a 90% one-year survival rate. The **negative frame** described the same surgery as having a 10% one-year mortality rate. Each student then chose whether to recommend the treatment (yes / no).\n\n")
+cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
+cat("- **Sample**: The students in this class section who participated.\n")
+cat("- **Observational unit**: An individual student.\n")
+cat("- **Explanatory variable**: Frame (positive vs. negative) — categorical, two levels.\n")
+cat("- **Response variable**: Whether the student recommended the treatment (yes/no) — categorical, binary.\n")
+cat("- **Parameter of interest**: $p_{\\text{positive}} - p_{\\text{negative}}$, the difference in the true proportion of students who would recommend treatment under each frame.\n\n")
+```
+
+```{r exp3-summary, eval=exp3_ok}
+exp3_clean <- exp3 |>
+  mutate(group = factor(group, levels = c("positive", "negative")),
+         choice = factor(choice, levels = c("yes", "no")))
+
+exp3_summary <- exp3_clean |>
+  group_by(group) |>
+  summarise(
+    n = n(),
+    yes_count = sum(choice == "yes"),
+    prop_yes = round(mean(choice == "yes"), 3),
+    .groups = "drop"
+  )
+kable(exp3_summary,
+      col.names = c("Frame", "n", "# Recommended", "Proportion 'yes'"),
+      caption = "Recommendation rates by framing condition")
+```
+
+```{r exp3-plot, eval=exp3_ok}
+ggplot(exp3_summary, aes(x = group, y = prop_yes, fill = group)) +
+  geom_col(width = 0.55, alpha = 0.85) +
+  geom_text(aes(label = paste0(round(prop_yes * 100), "%")),
+            vjust = -0.4, size = 4.5) +
+  scale_y_continuous(limits = c(0, 1.05), labels = percent_format()) +
+  scale_fill_manual(values = c("positive" = "#2a6f97", "negative" = "#c0392b")) +
+  labs(x = "Framing condition", y = "Proportion who recommended treatment",
+       title = "Recommendation rate by frame") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+```{r exp3-test, eval=exp3_ok, results='asis'}
+n_pos <- sum(exp3_clean$group == "positive")
+n_neg <- sum(exp3_clean$group == "negative")
+yes_pos <- sum(exp3_clean$group == "positive" & exp3_clean$choice == "yes")
+yes_neg <- sum(exp3_clean$group == "negative" & exp3_clean$choice == "yes")
+
+test3 <- prop.test(x = c(yes_pos, yes_neg), n = c(n_pos, n_neg), correct = FALSE)
+
+# Two-proportion z statistic (manual, since prop.test gives chi-square)
+p_pos <- yes_pos / n_pos
+p_neg <- yes_neg / n_neg
+p_pool <- (yes_pos + yes_neg) / (n_pos + n_neg)
+se_pool <- sqrt(p_pool * (1 - p_pool) * (1/n_pos + 1/n_neg))
+z_stat <- (p_pos - p_neg) / se_pool
+
+cat("## Hypotheses\n\n")
+cat("$$H_0:\\ p_{\\text{positive}} - p_{\\text{negative}} = 0 \\qquad H_a:\\ p_{\\text{positive}} - p_{\\text{negative}} \\neq 0$$\n\n")
+
+cat("## Point estimate\n\n")
+cat(sprintf("$\\hat{p}_{\\text{positive}} - \\hat{p}_{\\text{negative}} = %.3f - %.3f = %.3f$\n\n",
+            p_pos, p_neg, p_pos - p_neg))
+
+cat("## Test results\n\n")
+res3 <- data.frame(
+  Quantity = c("Test statistic (z)", "p-value",
+               "95% CI lower", "95% CI upper"),
+  Value = c(round(z_stat, 3),
+            fmt_p(test3$p.value),
+            round(test3$conf.int[1], 3),
+            round(test3$conf.int[2], 3))
+)
+print(kable(res3))
+
+cat("\n\n## Interpretation\n\n")
+cat(sprintf("- The test statistic %.3f tells us how many standard errors the observed difference in sample proportions lies from zero.\n", z_stat))
+cat(sprintf("- The p-value of %s is the probability of seeing a difference at least this extreme if framing had no real effect on recommendations.\n", fmt_p(test3$p.value)))
+ci_includes_zero3 <- test3$conf.int[1] <= 0 & test3$conf.int[2] >= 0
+cat(sprintf("- We are 95%% confident that the true difference $p_{\\text{positive}} - p_{\\text{negative}}$ lies between %.3f and %.3f. ",
+            test3$conf.int[1], test3$conf.int[2]))
+if (ci_includes_zero3) {
+  cat("Because **0 falls inside** this interval, the data are consistent with framing having no effect on recommendations.\n\n")
+} else {
+  cat("Because **0 does not fall inside** this interval, we have evidence that the two framings produce different recommendation rates.\n\n")
+}
+```
+
+\newpage
+
+# Discussion Questions for Students
+
+For each experiment, work through these in groups:
+
+1. **Population vs. sample.** What population are we trying to make inferences about? In what ways might our sample fail to represent that population?
+2. **Random assignment vs. random sampling.** Which one(s) did this experiment use, and what does that allow us to conclude?
+3. **Hypotheses.** State $H_0$ and $H_a$ in plain English, then in symbols.
+4. **Point estimate vs. parameter.** What is the parameter? What is the point estimate? Why are they different?
+5. **Test statistic.** Explain what the value means in terms of standard errors.
+6. **p-value.** Interpret the p-value in context — *not* as "the probability the null is true."
+7. **Confidence interval.** Interpret the 95% CI in context. What does it mean that 0 is (or is not) in the interval?
+8. **Conclusion.** At the 5% significance level, do you reject $H_0$? What is your conclusion in the context of the experiment?
