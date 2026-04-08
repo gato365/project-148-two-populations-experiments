@@ -5,7 +5,7 @@ author: "Cal Poly San Luis Obispo"
 date: today
 format:
   html:
-    toc: true
+    toc: false
     toc-depth: 3
     toc-location: left
     number-sections: true
@@ -27,7 +27,7 @@ execute:
 params:
   sheet_id: "12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0"
   sheet_url: "https://docs.google.com/spreadsheets/d/12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0/edit"
-  session: "sec-10"
+  session: "sec-08"
   show_reaction: true
   show_memory: true
   show_framing: true
@@ -170,11 +170,11 @@ ggplot(exp1_clean, aes(x = group, y = avg_rt_ms, fill = group)) +
 ## Step 4 — Analysis
 
 ```{r exp1-test, eval=exp1_ok, results='asis'}
-test1 <- t.test(avg_rt_ms ~ group, data = exp1_clean)
+test1 <- t.test(avg_rt_ms ~ group, data = exp1_clean, conf.level = 0.90)
 
 res1 <- data.frame(
   Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
-               "95% CI lower", "95% CI upper"),
+               "90% CI lower", "90% CI upper"),
   Value = c(round(test1$statistic, 3),
             round(test1$parameter, 2),
             fmt_p(test1$p.value),
@@ -314,7 +314,7 @@ An initial conclusion based purely on SSVA: if the two means are close and the b
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Is there a difference in the true mean reaction time between students who listen to music and students who work in silence?
+Is there a difference in the population mean reaction time between students who listen to music and students who work in silence?
 </details>
 :::
 
@@ -458,7 +458,7 @@ Possible improvements: standardize the device used (eliminate touchscreen vs. tr
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-**In words:** $H_0$: the true mean reaction time is the same for students listening to music and students in silence. $H_a$: the true mean reaction time differs between the two conditions.
+**In words:** $H_0$: the population mean reaction time is the same for students listening to music and students in silence. $H_a$: the population mean reaction time differs between the two conditions.
 
 **In symbols:** $H_0:\ \mu_{\text{music}} - \mu_{\text{silence}} = 0$ vs. $H_a:\ \mu_{\text{music}} - \mu_{\text{silence}} \neq 0$.
 </details>
@@ -479,7 +479,7 @@ Possible improvements: standardize the device used (eliminate touchscreen vs. tr
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-If p < 0.05, we **reject** $H_0$ at the 5% significance level — we have evidence of a real difference in mean reaction time between the two conditions. If p ≥ 0.05, we **fail to reject** $H_0$ — the data are consistent with no real difference. Always state the conclusion in context, not just the statistical decision.
+If p < 0.10, we **reject** $H_0$ at the 10% significance level — we have evidence of a real difference in mean reaction time between the two conditions. If p ≥ 0.10, we **fail to reject** $H_0$ — the data are consistent with no real difference. Always state the conclusion in context, not just the statistical decision.
 </details>
 :::
 
@@ -498,7 +498,7 @@ If p < 0.05, we **reject** $H_0$ at the 5% significance level — we have eviden
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Yes. A two-sided hypothesis test at significance level $\alpha$ and a $(1-\alpha)$ confidence interval are mathematically equivalent: if you **reject** $H_0$ at $\alpha = 0.05$, then the 95% CI will **not** contain 0. If you **fail to reject**, the 95% CI **will** contain 0. They always agree for the same data and same $\alpha$.
+Yes. A two-sided hypothesis test at significance level $\alpha$ and a $(1-\alpha)$ confidence interval are mathematically equivalent: if you **reject** $H_0$ at $\alpha = 0.10$, then the 90% CI will **not** contain 0. If you **fail to reject**, the 90% CI **will** contain 0. They always agree for the same data and same $\alpha$.
 </details>
 :::
 
@@ -552,18 +552,18 @@ exp2_clean |>
 ```{r exp2-summary, eval=exp2_ok}
 exp2_summary <- data.frame(
   Quantity = c("n (students)",
-               "Mean score, Round 1 (before)",
-               "Mean score, Round 2 (after)",
-               "Mean within-student difference (after − before)",
-               "SD of differences",
-               "Min difference", "Max difference"),
+               "Mean of the differences (after \u2212 before)",
+               "SD of the differences",
+               "Min difference", "Max difference",
+               "Mean score, Round 1 (before) — for reference",
+               "Mean score, Round 2 (after) — for reference"),
   Value = c(nrow(exp2_clean),
-            round(mean(exp2_clean$score_before), 2),
-            round(mean(exp2_clean$score_after), 2),
             round(mean(exp2_clean$difference), 2),
             round(sd(exp2_clean$difference), 2),
             min(exp2_clean$difference),
-            max(exp2_clean$difference))
+            max(exp2_clean$difference),
+            round(mean(exp2_clean$score_before), 2),
+            round(mean(exp2_clean$score_after), 2))
 )
 kable(exp2_summary, caption = "Summary statistics")
 ```
@@ -571,32 +571,26 @@ kable(exp2_summary, caption = "Summary statistics")
 ## Step 3 — Visualization
 
 ```{r exp2-plot, eval=exp2_ok}
-exp2_long <- exp2_clean |>
-  mutate(student = row_number()) |>
-  pivot_longer(cols = c(score_before, score_after),
-               names_to = "round", values_to = "score") |>
-  mutate(round = factor(round,
-                        levels = c("score_before", "score_after"),
-                        labels = c("Before", "After")))
-
-ggplot(exp2_long, aes(x = round, y = score, group = student)) +
-  geom_line(alpha = 0.4, color = "#6b7570") +
-  geom_point(aes(color = round), size = 2.8) +
-  scale_color_manual(values = c("Before" = "#BD8B13", "After" = "#154734")) +
-  labs(x = "", y = "Digits recalled correctly (out of 14)",
-       title = "Within-student change after learning chunking") +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "none")
+ggplot(exp2_clean, aes(x = "", y = difference)) +
+  geom_boxplot(fill = "#e8f1ed", color = "#154734", width = 0.4,
+               outlier.shape = NA) +
+  geom_jitter(width = 0.08, alpha = 0.55, color = "#BD8B13", size = 2.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#a82c1f",
+             linewidth = 0.9) +
+  labs(x = "", y = "Difference in digits recalled (after \u2212 before)",
+       title = "Distribution of within-student differences",
+       subtitle = "Dashed red line = no change (difference = 0)") +
+  theme_minimal(base_size = 12)
 ```
 
 ## Step 4 — Analysis
 
 ```{r exp2-test, eval=exp2_ok, results='asis'}
-test2 <- t.test(exp2_clean$score_after, exp2_clean$score_before, paired = TRUE)
+test2 <- t.test(exp2_clean$score_after, exp2_clean$score_before, paired = TRUE, conf.level = 0.90)
 
 res2 <- data.frame(
   Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
-               "95% CI lower", "95% CI upper"),
+               "90% CI lower", "90% CI upper"),
   Value = c(round(test2$statistic, 3),
             round(test2$parameter, 2),
             fmt_p(test2$p.value),
@@ -608,11 +602,11 @@ print(kable(res2, caption = "Paired t-test: after − before chunking"))
 
 ## SSVA Guiding Questions — Experiment 2
 
-**Q1.** How many variables are there in this experiment, and why is this design different from Experiment 1?
+**Q1.** Why does this design produce only **one variable** to analyze, even though each student has two scores?
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-There are two measurements per student (score before chunking and score after chunking). Because both measurements come from the same student, they are **paired**, unlike Experiment 1 where each student contributed one measurement to one of two independent groups.
+Each student has a score before and after chunking, but the paired design **subtracts** them to produce a single difference per student. That difference is the only variable the t-test uses. This is different from Experiment 1, where each student belonged to one independent group and contributed one score directly — no subtraction needed.
 </details>
 :::
 
@@ -632,11 +626,11 @@ There are two measurements per student (score before chunking and score after ch
 
 
 
-**Q2.** What are the types of the variables, and what is the key *derived* variable for the paired analysis?
+**Q2.** What is the variable we actually analyze in this paired design?
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Both scores (before, after) are quantitative (discrete integer counts out of 14). The round (before / after) is categorical with 2 levels. The **derived variable** that we actually analyze is each student's **difference** score = after − before — this single per-student number is what the paired t-test operates on.
+- **The difference** (after − before): this is the **only variable the paired t-test analyzes**. It is quantitative (can be negative, zero, or positive). By computing one difference score per student, the paired design collapses the two raw measurements into a single number per observational unit. The parameter of interest is **μ_d**, the **population mean of the differences** — not the mean of "before" or "after" separately.
 </details>
 :::
 
@@ -673,11 +667,11 @@ Both scores (before, after) are quantitative (discrete integer counts out of 14)
 * * *
 :::
 
-**Q4.** What does the visualization show? What does a line that slopes upward mean for an individual student? What about a flat or downward line?
+**Q4.** What does the boxplot show? What would it look like if chunking clearly helped? What if it had no effect?
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Each line connects one student's two scores. An **upward-sloping** line means that student improved after learning the chunking trick. A **flat** line means no change. A **downward-sloping** line means the student actually did worse in Round 2 (possible due to fatigue, harder random digit string, or just noise). The overall pattern — mostly up, mostly flat, or mixed — gives a strong visual sense of whether chunking helped.
+The boxplot displays the **distribution of within-student differences** (after − before). The dashed red line marks zero — no change. If chunking helped, the bulk of the box and most dots should be **above zero**. If it had no effect, the box should **straddle zero** with the median near zero. Individual dots above zero are students who improved; dots below zero are students who did worse in Round 2. The spread of the box tells you how consistent the effect was across students.
 </details>
 :::
 
@@ -694,11 +688,11 @@ Each line connects one student's two scores. An **upward-sloping** line means th
 * * *
 :::
 
-**Q5.** What does the mean difference tell you? What does the standard deviation of the differences tell you?
+**Q5.** What does the **mean of the differences** tell you? What does the **SD of the differences** tell you?
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-The **mean difference** is the average within-student change. A positive mean difference means, on average, students did better after learning chunking. The **SD of differences** tells you how consistent that change was across students — a small SD means nearly everyone changed by about the same amount, while a large SD means some students improved a lot and others barely changed (or got worse).
+The **mean of the differences** estimates the population mean of the differences, μ_d — the average within-student change. A positive value means students scored higher after learning chunking, on average. The **SD of the differences** measures how much individual difference scores vary around that mean — a small SD means the effect was consistent across students; a large SD means some improved a lot while others barely changed or got worse.
 </details>
 :::
 
@@ -742,7 +736,7 @@ If most lines slope upward and the mean difference is clearly positive, SSVA sug
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Is the true mean within-student change in recall score (after − before chunking) different from zero?
+Is the **population mean of the differences** (after − before) equal to zero, or is there evidence it is different from zero?
 </details>
 :::
 
@@ -810,10 +804,8 @@ An individual student. Each student contributes a *pair* of scores, but the unit
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-- **score_before** — quantitative discrete — the student's Round 1 score
-- **score_after** — quantitative discrete — the student's Round 2 score
-- **difference** (derived) — quantitative — the within-student change; this is what the paired t-test analyzes
-- **round** — categorical (before / after) — the within-subject condition
+- **difference** (after − before) — quantitative — the **one variable we analyze**; the paired t-test operates only on this derived value.
+- **score_before** and **score_after** are recorded for reference but are not directly compared by the test — they exist only to produce the difference.
 </details>
 :::
 
@@ -887,9 +879,9 @@ Improvements: (1) counterbalance the order — randomly assign half the students
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-**In words:** $H_0$: the true mean within-student change in recall score is zero. $H_a$: the true mean within-student change is different from zero.
+**In words:** $H_0$: the population mean of the differences is zero (chunking has no effect on average). $H_a$: the population mean of the differences is not zero.
 
-**In symbols:** $H_0:\ \mu_d = 0$ vs. $H_a:\ \mu_d \neq 0$, where $\mu_d$ is the population mean of the difference (after − before).
+**In symbols:** $H_0:\ \mu_d = 0$ vs. $H_a:\ \mu_d \neq 0$, where $\mu_d$ is the population mean of the differences (after − before).
 </details>
 :::
 
@@ -908,7 +900,7 @@ Improvements: (1) counterbalance the order — randomly assign half the students
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-If p < 0.05, reject $H_0$ — the data provide evidence that chunking changes mean recall. If p ≥ 0.05, fail to reject — the data are consistent with no change. State the conclusion in context.
+If p < 0.10, reject $H_0$ — the data provide evidence that chunking changes mean recall. If p ≥ 0.10, fail to reject — the data are consistent with no change. State the conclusion in context.
 </details>
 :::
 
@@ -927,7 +919,7 @@ If p < 0.05, reject $H_0$ — the data provide evidence that chunking changes me
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Yes — same logic as in Experiment 1. Reject $H_0$ at $\alpha = 0.05$ ⇔ 0 is outside the 95% CI. Fail to reject ⇔ 0 is inside.
+Yes — same logic as in Experiment 1. Reject $H_0$ at $\alpha = 0.10$ ⇔ 0 is outside the 90% CI. Fail to reject ⇔ 0 is inside.
 </details>
 :::
 
@@ -1015,7 +1007,7 @@ n_neg <- sum(exp3_clean$group == "negative")
 yes_pos <- sum(exp3_clean$group == "positive" & exp3_clean$choice == "yes")
 yes_neg <- sum(exp3_clean$group == "negative" & exp3_clean$choice == "yes")
 
-test3 <- prop.test(x = c(yes_pos, yes_neg), n = c(n_pos, n_neg), correct = FALSE)
+test3 <- prop.test(x = c(yes_pos, yes_neg), n = c(n_pos, n_neg), correct = FALSE, conf.level = 0.90)
 
 p_pos <- yes_pos / n_pos
 p_neg <- yes_neg / n_neg
@@ -1025,7 +1017,7 @@ z_stat <- (p_pos - p_neg) / se_pool
 
 res3 <- data.frame(
   Quantity = c("Test statistic (z)", "p-value",
-               "95% CI lower", "95% CI upper"),
+               "90% CI lower", "90% CI upper"),
   Value = c(round(z_stat, 3),
             fmt_p(test3$p.value),
             round(test3$conf.int[1], 3),
@@ -1081,7 +1073,7 @@ Two variables, and **both** are categorical: framing group (positive / negative)
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Each bar shows the proportion of students in that framing group who said "yes." A taller bar means a higher recommendation rate. Compare the heights: the gap between the two bars is the observed difference in sample proportions, which is our point estimate for the true difference in population proportions.
+Each bar shows the proportion of students in that framing group who said "yes." A taller bar means a higher recommendation rate. Compare the heights: the gap between the two bars is the observed difference in sample proportions, which is our point estimate for the actual difference in population proportions.
 </details>
 :::
 
@@ -1146,7 +1138,7 @@ If the two proportions are noticeably different (e.g., 75% vs. 45%), SSVA sugges
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Is the true proportion of students who would recommend the treatment different under positive framing compared to negative framing?
+Is the population proportion of students who would recommend the treatment different under positive framing compared to negative framing?
 </details>
 :::
 
@@ -1285,7 +1277,7 @@ Improvements: (1) prevent students from seeing each other's scenarios (physical 
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-**In words:** $H_0$: the true proportion of students who recommend the treatment is the same under both framings. $H_a$: the true proportions differ.
+**In words:** $H_0$: the population proportion of students who recommend the treatment is the same under both framings. $H_a$: the population proportions differ.
 
 **In symbols:** $H_0:\ p_{\text{positive}} - p_{\text{negative}} = 0$ vs. $H_a:\ p_{\text{positive}} - p_{\text{negative}} \neq 0$.
 </details>
@@ -1306,7 +1298,7 @@ Improvements: (1) prevent students from seeing each other's scenarios (physical 
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-If p < 0.05, reject $H_0$ — we have evidence that framing affects recommendation rates. If p ≥ 0.05, fail to reject — the data are consistent with no framing effect. State the conclusion in the context of the medical scenario.
+If p < 0.10, reject $H_0$ — we have evidence that framing affects recommendation rates. If p ≥ 0.10, fail to reject — the data are consistent with no framing effect. State the conclusion in the context of the medical scenario.
 </details>
 :::
 
@@ -1325,7 +1317,7 @@ If p < 0.05, reject $H_0$ — we have evidence that framing affects recommendati
 
 ::: {.content-visible when-format="html"}
 <details><summary>Click to reveal answer</summary>
-Yes. If you rejected $H_0$ at the 5% level, the 95% CI for $p_{\text{positive}} - p_{\text{negative}}$ will not contain 0. If you failed to reject, it will contain 0. The test and the interval always agree.
+Yes. If you rejected $H_0$ at the 10% level, the 90% CI for $p_{\text{positive}} - p_{\text{negative}}$ will not contain 0. If you failed to reject, it will contain 0. The test and the interval always agree.
 </details>
 :::
 
