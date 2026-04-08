@@ -1,11 +1,22 @@
 ---
-title: "STAT 252 — In-Class Experiments Report"
+title: "STAT 252 — In-Class Experiments"
+subtitle: "Guided Analysis Workbook"
 author: "Cal Poly San Luis Obispo"
 date: today
 format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    theme: cosmo
+    fig-width: 7
+    fig-height: 4.2
+    code-fold: true
+    embed-resources: true
   docx:
     toc: true
-    toc-depth: 2
+    toc-depth: 3
     number-sections: true
     fig-width: 6
     fig-height: 3.8
@@ -14,28 +25,26 @@ execute:
   warning: false
   message: false
 params:
-  sheet_id: "PASTE_YOUR_GOOGLE_SHEET_ID_HERE"
-  session: "spring2026-mwf10"
+  sheet_id: "12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0"
+  sheet_url: "https://docs.google.com/spreadsheets/d/12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0/edit"
+  session: "sec-10"
   show_reaction: true
   show_memory: true
   show_framing: true
 ---
 
 ```{r setup}
-# ---- Packages ----
 library(googlesheets4)
 library(dplyr)
 library(ggplot2)
 library(knitr)
 library(scales)
+library(tidyr)
 
-# ---- Auth ----
 # First time you render: a browser window will open. Sign in with the Google
-# account that owns the sheet, allow access. After that, the token is cached
-# and you won't be prompted again.
-gs4_auth(email = TRUE)  # uses the most recently authenticated email
+# account that owns the sheet, allow access. After that, the token is cached.
+gs4_auth(email = TRUE)
 
-# ---- Helpers ----
 read_tab <- function(tab) {
   tryCatch(
     read_sheet(params$sheet_id, sheet = tab) |>
@@ -50,7 +59,6 @@ fmt_p <- function(p) {
   formatC(p, format = "f", digits = 4)
 }
 
-# Section heading helper
 section_check <- function(df, name) {
   if (is.null(df) || nrow(df) == 0) {
     cat(sprintf("> *No data found for the '%s' experiment in session `%s`. Skipping.*\n\n",
@@ -61,34 +69,64 @@ section_check <- function(df, name) {
 }
 ```
 
-```{r session-info}
+# How to Use This Workbook {.unnumbered}
+
+This workbook walks through three in-class experiments using the **SSVA framework** (Summary statistics → Visualization → Analysis). For each experiment we will:
+
+1. **State the research question.**
+2. **Look at the raw data** directly in the Google Sheet.
+3. **Examine summary statistics.**
+4. **Interpret the visualization.**
+5. **Run the analysis** (hypothesis test + confidence interval).
+6. **Answer SSVA guiding questions** as a class.
+7. **Answer independent conceptual questions** on your own.
+
+```{r session-info, results='asis'}
 cat(sprintf("**Session code:** `%s`  \n", params$session))
-cat(sprintf("**Report generated:** %s\n", format(Sys.time(), "%B %d, %Y at %I:%M %p")))
+cat(sprintf("**Class Google Sheet:** [open in new tab](%s)  \n", params$sheet_url))
+cat(sprintf("**Report generated:** %s\n\n", format(Sys.time(), "%B %d, %Y at %I:%M %p")))
 ```
 
-# Experiment 1 — Two Population Means: Reaction Time
+::: {.callout-tip}
+**Before each experiment:** open the class Google Sheet linked above and click the tab for that experiment (`reaction`, `memory`, or `framing`) to see the raw data you helped collect.
+:::
+
+\newpage
+
+# Experiment 1 — Two Independent Population Means
+
+## Research Question
+
+> **Does listening to music while performing a simple task change how quickly people can react?**
 
 ```{r exp1-load}
 exp1 <- if (params$show_reaction) read_tab("reaction") else NULL
 exp1_ok <- section_check(exp1, "reaction")
 ```
 
-```{r exp1-content, eval=exp1_ok, results='asis'}
-cat("## Design\n\n")
-cat("Each student was randomly assigned to one of two conditions: completing a 5-trial reaction-time task with **music** playing through headphones, or in **silence**. Their average reaction time across the 5 trials (in milliseconds) is the response.\n\n")
-cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
-cat("- **Sample**: The students in this class section who participated.\n")
-cat("- **Observational unit**: An individual student.\n")
-cat("- **Explanatory variable**: Listening condition (music vs. silence) — categorical, two levels.\n")
-cat("- **Response variable**: Average reaction time across 5 trials, in ms — quantitative.\n")
-cat("- **Parameter of interest**: $\\mu_{\\text{music}} - \\mu_{\\text{silence}}$, the difference in true mean reaction time between the two populations.\n\n")
-```
-
-```{r exp1-summary, eval=exp1_ok}
+```{r exp1-clean, eval=exp1_ok}
 exp1_clean <- exp1 |>
   mutate(group = factor(group, levels = c("music", "silence")),
          avg_rt_ms = as.numeric(avg_rt_ms))
+```
 
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `reaction` tab.** Look at how each row is a single student, with their assigned group and their average reaction time across 5 trials. How many rows do you see? How are students split between the two groups?
+:::
+
+```{r exp1-glimpse, eval=exp1_ok}
+exp1_clean |>
+  select(group, avg_rt_ms) |>
+  head(6) |>
+  kable(caption = "First few rows of the reaction time data (for reference)",
+        col.names = c("Group", "Average RT (ms)"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp1-summary, eval=exp1_ok}
 exp1_summary <- exp1_clean |>
   group_by(group) |>
   summarise(
@@ -96,36 +134,34 @@ exp1_summary <- exp1_clean |>
     mean_rt = round(mean(avg_rt_ms, na.rm = TRUE), 1),
     sd_rt = round(sd(avg_rt_ms, na.rm = TRUE), 1),
     median_rt = round(median(avg_rt_ms, na.rm = TRUE), 1),
+    min_rt = round(min(avg_rt_ms, na.rm = TRUE), 1),
+    max_rt = round(max(avg_rt_ms, na.rm = TRUE), 1),
     .groups = "drop"
   )
 
 kable(exp1_summary,
-      col.names = c("Group", "n", "Mean RT (ms)", "SD (ms)", "Median (ms)"),
+      col.names = c("Group", "n", "Mean (ms)", "SD (ms)", "Median (ms)", "Min", "Max"),
       caption = "Summary statistics by group")
 ```
+
+## Step 3 — Visualization
 
 ```{r exp1-plot, eval=exp1_ok}
 ggplot(exp1_clean, aes(x = group, y = avg_rt_ms, fill = group)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, width = 0.5) +
   geom_jitter(width = 0.12, size = 2.2, alpha = 0.75) +
-  scale_fill_manual(values = c("music" = "#2a6f97", "silence" = "#c0392b")) +
+  scale_fill_manual(values = c("music" = "#154734", "silence" = "#BD8B13")) +
   labs(x = "Listening condition", y = "Average reaction time (ms)",
        title = "Reaction time by listening condition") +
   theme_minimal(base_size = 12) +
   theme(legend.position = "none")
 ```
 
+## Step 4 — Analysis
+
 ```{r exp1-test, eval=exp1_ok, results='asis'}
 test1 <- t.test(avg_rt_ms ~ group, data = exp1_clean)
 
-cat("## Hypotheses\n\n")
-cat("$$H_0:\\ \\mu_{\\text{music}} - \\mu_{\\text{silence}} = 0 \\qquad H_a:\\ \\mu_{\\text{music}} - \\mu_{\\text{silence}} \\neq 0$$\n\n")
-
-cat("## Point estimate\n\n")
-pe <- diff(rev(test1$estimate))
-cat(sprintf("$\\bar{x}_{\\text{music}} - \\bar{x}_{\\text{silence}} = %.1f$ ms\n\n", -pe))
-
-cat("## Test results\n\n")
 res1 <- data.frame(
   Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
                "95% CI lower", "95% CI upper"),
@@ -135,90 +171,419 @@ res1 <- data.frame(
             round(test1$conf.int[1], 2),
             round(test1$conf.int[2], 2))
 )
-print(kable(res1))
-
-cat("\n\n## Interpretation\n\n")
-cat(sprintf("- The test statistic %.3f tells us how many standard errors the observed difference in sample means lies from zero.\n", test1$statistic))
-cat(sprintf("- The p-value of %s is the probability of seeing a difference at least this extreme if there were truly no effect of music on reaction time.\n", fmt_p(test1$p.value)))
-ci_includes_zero <- test1$conf.int[1] <= 0 & test1$conf.int[2] >= 0
-cat(sprintf("- We are 95%% confident that the true mean difference (music − silence) lies between %.1f ms and %.1f ms. ",
-            test1$conf.int[1], test1$conf.int[2]))
-if (ci_includes_zero) {
-  cat("Because **0 falls inside** this interval, the data are consistent with no real difference in mean reaction time between the two conditions.\n\n")
-} else {
-  cat("Because **0 does not fall inside** this interval, we have evidence that the two conditions produce different mean reaction times.\n\n")
-}
+print(kable(res1, caption = "Welch two-sample t-test: music vs. silence"))
 ```
+
+## SSVA Guiding Questions — Experiment 1
+
+**Q1.** How many variables are present in this experiment?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Two variables: listening condition (group) and average reaction time.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q2.** What are the types of each variable?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **Listening condition** (music / silence): categorical, two levels.
+- **Average reaction time in ms**: quantitative (continuous).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q3.** What are the response and explanatory variables?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **Explanatory**: listening condition (music vs. silence).
+- **Response**: average reaction time in milliseconds.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q4.** What relationship is shown in the visualization? Which group appears to react faster on average, and how much overlap is there between the two distributions?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The boxplot shows the median, quartiles, and spread of reaction times in each group. Compare the boxes: if one box sits noticeably lower, that group reacts faster on average. The degree of overlap between the boxes is an informal cue about how clear the difference is — more overlap means the groups look more similar, less overlap means the groups look more distinct.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q5.** What do the measures of center and variability tell you? Is one group more variable than the other?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Compare the means and medians across groups to assess center. Compare the standard deviations to assess variability. A larger SD means reaction times in that group are more spread out — some students were much faster or slower than the group average. If the two SDs are very different, the groups have different amounts of within-group noise, which affects how we interpret the difference between them.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q6.** Based on the visualization and summary statistics alone, what is your *initial* conclusion about whether music affects reaction time? (Don't look at the p-value yet.)
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+An initial conclusion based purely on SSVA: if the two means are close and the boxes overlap substantially, the data look consistent with no real effect. If one mean is clearly lower and the boxes are mostly separated, the data suggest a real difference. The formal test in Step 4 will either support or refine this initial impression.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+## Independent Conceptual Questions — Experiment 1
+
+**C1.** What is the statistical question?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Is there a difference in the true mean reaction time between students who listen to music and students who work in silence?
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C2.** What is the population of interest?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+All Cal Poly students who could plausibly enroll in this course. (A broader target population — "all college students" — is a defensible answer too, but it requires a bigger leap.)
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C3.** What is the sample?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The students in this section of STAT 252 who participated in the experiment.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C4.** What is the observational unit?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+An individual student. Each student contributes one observation (their average reaction time across 5 trials).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C5.** Describe all variables in the study (name, type, role).
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **group** — categorical (2 levels: music, silence) — explanatory
+- **avg_rt_ms** — quantitative continuous — response
+- (Also recorded but not analyzed: individual trial times, timestamp, session)
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C6.** What potential confounding variables exist?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Possible confounders include: time of day (and fatigue), caffeine intake, device type (phone touchscreen vs. laptop trackpad), noise level of the classroom environment even for the "silence" group, and individual differences in hand-eye coordination or prior gaming experience. Note that because of random assignment, most of these should balance out across groups on average.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C7.** Is this an experiment or an observational study? How do you know?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+This is an **experiment**. Students were *randomly assigned* to the music or silence condition by the app, rather than self-selecting. Random assignment of the explanatory variable is the defining feature of an experiment.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C8.** What design improvements could enhance the study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Possible improvements: standardize the device used (eliminate touchscreen vs. trackpad variability), control the type of music (everyone gets the same track), run more trials per student to reduce within-student noise, blind participants to the research hypothesis, and draw the sample from a broader population than a single class section.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C9.** State the null and alternative hypotheses (in both words and symbols).
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**In words:** $H_0$: the true mean reaction time is the same for students listening to music and students in silence. $H_a$: the true mean reaction time differs between the two conditions.
+
+**In symbols:** $H_0:\ \mu_{\text{music}} - \mu_{\text{silence}} = 0$ vs. $H_a:\ \mu_{\text{music}} - \mu_{\text{silence}} \neq 0$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C10.** Based on the test statistic and p-value, what do you conclude about $H_0$?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If p < 0.05, we **reject** $H_0$ at the 5% significance level — we have evidence of a real difference in mean reaction time between the two conditions. If p ≥ 0.05, we **fail to reject** $H_0$ — the data are consistent with no real difference. Always state the conclusion in context, not just the statistical decision.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C11.** If the confidence interval were not provided, could you infer whether 0 would be in it based on the hypothesis test decision? Explain.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Yes. A two-sided hypothesis test at significance level $\alpha$ and a $(1-\alpha)$ confidence interval are mathematically equivalent: if you **reject** $H_0$ at $\alpha = 0.05$, then the 95% CI will **not** contain 0. If you **fail to reject**, the 95% CI **will** contain 0. They always agree for the same data and same $\alpha$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
 
 \newpage
 
-# Experiment 2 — Paired t: Memory Recall Before vs. After Chunking
+# Experiment 2 — Paired t-Test
+
+## Research Question
+
+> **Does learning a simple chunking strategy improve short-term recall of a 14-digit sequence?**
 
 ```{r exp2-load}
 exp2 <- if (params$show_memory) read_tab("memory") else NULL
 exp2_ok <- section_check(exp2, "memory")
 ```
 
-```{r exp2-content, eval=exp2_ok, results='asis'}
-cat("## Design\n\n")
-cat("Each student was shown a string of 14 random digits for 6 seconds and asked to recall as many as possible in order (Round 1, *before*). They were then taught the **chunking** trick — grouping digits into sets of 3–4 — and shown a new 14-digit string, this time displayed pre-chunked on screen, under the same time constraint (Round 2, *after*). The response is each student's score (number of digits recalled in correct position out of 14) in each round.\n\n")
-cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
-cat("- **Sample**: The students in this class section who participated.\n")
-cat("- **Observational unit**: An individual student (each student contributes a *pair* of scores).\n")
-cat("- **Explanatory variable**: Round (before vs. after the chunking trick) — categorical, two levels, applied to the same student.\n")
-cat("- **Response variable**: Number of digits recalled correctly out of 14 — quantitative.\n")
-cat("- **Parameter of interest**: $\\mu_d$, the true mean of the within-student difference (after − before).\n\n")
-cat("Because each student contributes both measurements, we use a **paired t-test** on the differences rather than a two-sample test.\n\n")
-```
-
-```{r exp2-summary, eval=exp2_ok}
+```{r exp2-clean, eval=exp2_ok}
 exp2_clean <- exp2 |>
   mutate(score_before = as.numeric(score_before),
          score_after = as.numeric(score_after),
          difference = score_after - score_before)
+```
 
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `memory` tab.** Each row is a single student with two scores: `score_before` (Round 1, no chunking) and `score_after` (Round 2, with chunking). Look at a few rows — does the "after" score tend to be higher, lower, or the same as "before" for each student?
+:::
+
+```{r exp2-glimpse, eval=exp2_ok}
+exp2_clean |>
+  select(score_before, score_after, difference) |>
+  head(6) |>
+  kable(caption = "First few rows of the memory data (for reference)",
+        col.names = c("Before (Round 1)", "After (Round 2)", "Difference"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp2-summary, eval=exp2_ok}
 exp2_summary <- data.frame(
-  Quantity = c("n (students)", "Mean (before)", "Mean (after)",
-               "Mean difference (after − before)", "SD of differences"),
+  Quantity = c("n (students)",
+               "Mean score, Round 1 (before)",
+               "Mean score, Round 2 (after)",
+               "Mean within-student difference (after − before)",
+               "SD of differences",
+               "Min difference", "Max difference"),
   Value = c(nrow(exp2_clean),
             round(mean(exp2_clean$score_before), 2),
             round(mean(exp2_clean$score_after), 2),
             round(mean(exp2_clean$difference), 2),
-            round(sd(exp2_clean$difference), 2))
+            round(sd(exp2_clean$difference), 2),
+            min(exp2_clean$difference),
+            max(exp2_clean$difference))
 )
 kable(exp2_summary, caption = "Summary statistics")
 ```
 
+## Step 3 — Visualization
+
 ```{r exp2-plot, eval=exp2_ok}
 exp2_long <- exp2_clean |>
   mutate(student = row_number()) |>
-  tidyr::pivot_longer(cols = c(score_before, score_after),
-                      names_to = "round", values_to = "score") |>
+  pivot_longer(cols = c(score_before, score_after),
+               names_to = "round", values_to = "score") |>
   mutate(round = factor(round,
                         levels = c("score_before", "score_after"),
                         labels = c("Before", "After")))
 
 ggplot(exp2_long, aes(x = round, y = score, group = student)) +
-  geom_line(alpha = 0.4, color = "#6b6b6b") +
-  geom_point(aes(color = round), size = 2.5) +
-  scale_color_manual(values = c("Before" = "#c0392b", "After" = "#2d8a4e")) +
+  geom_line(alpha = 0.4, color = "#6b7570") +
+  geom_point(aes(color = round), size = 2.8) +
+  scale_color_manual(values = c("Before" = "#BD8B13", "After" = "#154734")) +
   labs(x = "", y = "Digits recalled correctly (out of 14)",
        title = "Within-student change after learning chunking") +
   theme_minimal(base_size = 12) +
   theme(legend.position = "none")
 ```
 
+## Step 4 — Analysis
+
 ```{r exp2-test, eval=exp2_ok, results='asis'}
 test2 <- t.test(exp2_clean$score_after, exp2_clean$score_before, paired = TRUE)
 
-cat("## Hypotheses\n\n")
-cat("$$H_0:\\ \\mu_d = 0 \\qquad H_a:\\ \\mu_d \\neq 0$$\n\n")
-cat("where $\\mu_d$ is the true mean difference (after − before).\n\n")
-
-cat("## Point estimate\n\n")
-cat(sprintf("$\\bar{d} = %.2f$ digits\n\n", mean(exp2_clean$difference)))
-
-cat("## Test results\n\n")
 res2 <- data.frame(
   Quantity = c("Test statistic (t)", "Degrees of freedom", "p-value",
                "95% CI lower", "95% CI upper"),
@@ -228,71 +593,411 @@ res2 <- data.frame(
             round(test2$conf.int[1], 3),
             round(test2$conf.int[2], 3))
 )
-print(kable(res2))
-
-cat("\n\n## Interpretation\n\n")
-cat(sprintf("- The test statistic %.3f tells us how many standard errors the mean within-student change lies from zero.\n", test2$statistic))
-cat(sprintf("- The p-value of %s is the probability of seeing a mean change at least this large in magnitude if chunking truly had no effect on recall.\n", fmt_p(test2$p.value)))
-ci_includes_zero2 <- test2$conf.int[1] <= 0 & test2$conf.int[2] >= 0
-cat(sprintf("- We are 95%% confident that the true mean change in score (after − before) lies between %.2f and %.2f digits. ",
-            test2$conf.int[1], test2$conf.int[2]))
-if (ci_includes_zero2) {
-  cat("Because **0 falls inside** this interval, the data are consistent with chunking having no effect on recall.\n\n")
-} else {
-  cat("Because **0 does not fall inside** this interval, we have evidence that chunking changes mean recall scores.\n\n")
-}
+print(kable(res2, caption = "Paired t-test: after − before chunking"))
 ```
+
+## SSVA Guiding Questions — Experiment 2
+
+**Q1.** How many variables are there in this experiment, and why is this design different from Experiment 1?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+There are two measurements per student (score before chunking and score after chunking). Because both measurements come from the same student, they are **paired**, unlike Experiment 1 where each student contributed one measurement to one of two independent groups.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+
+
+
+**Q2.** What are the types of the variables, and what is the key *derived* variable for the paired analysis?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Both scores (before, after) are quantitative (discrete integer counts out of 14). The round (before / after) is categorical with 2 levels. The **derived variable** that we actually analyze is each student's **difference** score = after − before — this single per-student number is what the paired t-test operates on.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q3.** What are the explanatory and response variables?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **Explanatory**: round (before chunking vs. after chunking) — a within-subject condition.
+- **Response**: number of digits recalled correctly (out of 14).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q4.** What does the visualization show? What does a line that slopes upward mean for an individual student? What about a flat or downward line?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Each line connects one student's two scores. An **upward-sloping** line means that student improved after learning the chunking trick. A **flat** line means no change. A **downward-sloping** line means the student actually did worse in Round 2 (possible due to fatigue, harder random digit string, or just noise). The overall pattern — mostly up, mostly flat, or mixed — gives a strong visual sense of whether chunking helped.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q5.** What does the mean difference tell you? What does the standard deviation of the differences tell you?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The **mean difference** is the average within-student change. A positive mean difference means, on average, students did better after learning chunking. The **SD of differences** tells you how consistent that change was across students — a small SD means nearly everyone changed by about the same amount, while a large SD means some students improved a lot and others barely changed (or got worse).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q6.** Based on SSVA alone, what is your initial conclusion about whether chunking helps?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If most lines slope upward and the mean difference is clearly positive, SSVA suggests chunking helped. If the lines are a messy mix of up/down and the mean difference is near zero, SSVA suggests no clear effect. The formal test will quantify how confident we can be.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+## Independent Conceptual Questions — Experiment 2
+
+**C1.** What is the statistical question?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Is the true mean within-student change in recall score (after − before chunking) different from zero?
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C2.** What is the population of interest?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+All Cal Poly students who could plausibly take this course.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C3.** What is the sample?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The students in this STAT 252 section who completed both rounds of the memory task.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C4.** What is the observational unit?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+An individual student. Each student contributes a *pair* of scores, but the unit we're tracking is still the student — which is exactly why this is a paired design.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C5.** Describe all variables in the study.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **score_before** — quantitative discrete — the student's Round 1 score
+- **score_after** — quantitative discrete — the student's Round 2 score
+- **difference** (derived) — quantitative — the within-student change; this is what the paired t-test analyzes
+- **round** — categorical (before / after) — the within-subject condition
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C6.** What potential confounding variables exist? Consider what's special about a before/after design.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Order effects are the main concern: the "after" round always comes second, so students might be more fatigued (hurting Round 2) or more warmed up to the task (helping Round 2) independent of the chunking trick itself. Random digit strings differ between rounds, so some students might get an easier or harder string in one round. To separate the chunking effect from a pure practice effect, a better design would randomly assign half the students to do the chunking round first.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C7.** Is this an experiment or an observational study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+This is an **experiment** — the chunking "treatment" was deliberately applied to each student by the researcher (the app). However, it is a within-subject experiment without random assignment of the *order* of conditions, which is a design weakness (see Q6).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C8.** What design improvements could enhance the study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Improvements: (1) counterbalance the order — randomly assign half the students to learn chunking first and do the "hard" round second, to disentangle practice effects from the chunking effect; (2) use digit strings of matched difficulty across rounds; (3) add a control group that does two rounds without learning chunking in between, to estimate pure practice effects; (4) include a delay between rounds to reduce fatigue carryover.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C9.** State the null and alternative hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**In words:** $H_0$: the true mean within-student change in recall score is zero. $H_a$: the true mean within-student change is different from zero.
+
+**In symbols:** $H_0:\ \mu_d = 0$ vs. $H_a:\ \mu_d \neq 0$, where $\mu_d$ is the population mean of the difference (after − before).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C10.** Based on the test statistic and p-value, what do you conclude about $H_0$?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If p < 0.05, reject $H_0$ — the data provide evidence that chunking changes mean recall. If p ≥ 0.05, fail to reject — the data are consistent with no change. State the conclusion in context.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C11.** If the confidence interval were not provided, could you infer whether 0 is in it from the test decision?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Yes — same logic as in Experiment 1. Reject $H_0$ at $\alpha = 0.05$ ⇔ 0 is outside the 95% CI. Fail to reject ⇔ 0 is inside.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
 
 \newpage
 
-# Experiment 3 — Two Population Proportions: Framing Effect
+# Experiment 3 — Two Population Proportions
+
+## Research Question
+
+> **Does the way a medical outcome is framed — in terms of survival versus mortality — change whether people recommend the treatment?**
 
 ```{r exp3-load}
 exp3 <- if (params$show_framing) read_tab("framing") else NULL
 exp3_ok <- section_check(exp3, "framing")
 ```
 
-```{r exp3-content, eval=exp3_ok, results='asis'}
-cat("## Design\n\n")
-cat("Each student was randomly assigned to read one of two versions of an identical medical scenario. The **positive frame** described the surgery as having a 90% one-year survival rate. The **negative frame** described the same surgery as having a 10% one-year mortality rate. Each student then chose whether to recommend the treatment (yes / no).\n\n")
-cat("- **Population**: All Cal Poly students who could plausibly take this course.\n")
-cat("- **Sample**: The students in this class section who participated.\n")
-cat("- **Observational unit**: An individual student.\n")
-cat("- **Explanatory variable**: Frame (positive vs. negative) — categorical, two levels.\n")
-cat("- **Response variable**: Whether the student recommended the treatment (yes/no) — categorical, binary.\n")
-cat("- **Parameter of interest**: $p_{\\text{positive}} - p_{\\text{negative}}$, the difference in the true proportion of students who would recommend treatment under each frame.\n\n")
-```
-
-```{r exp3-summary, eval=exp3_ok}
+```{r exp3-clean, eval=exp3_ok}
 exp3_clean <- exp3 |>
   mutate(group = factor(group, levels = c("positive", "negative")),
          choice = factor(choice, levels = c("yes", "no")))
+```
 
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `framing` tab.** Each row is a single student: the `group` column tells you which framing they saw (positive = 90% survive, negative = 10% die), and the `choice` column records their yes/no recommendation. Roughly how many students are in each group? How many said "yes" in each?
+:::
+
+```{r exp3-glimpse, eval=exp3_ok}
+exp3_clean |>
+  select(group, choice) |>
+  head(8) |>
+  kable(caption = "First few rows of the framing data (for reference)",
+        col.names = c("Frame", "Choice"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp3-summary, eval=exp3_ok}
 exp3_summary <- exp3_clean |>
   group_by(group) |>
   summarise(
     n = n(),
     yes_count = sum(choice == "yes"),
+    no_count = sum(choice == "no"),
     prop_yes = round(mean(choice == "yes"), 3),
     .groups = "drop"
   )
 kable(exp3_summary,
-      col.names = c("Frame", "n", "# Recommended", "Proportion 'yes'"),
+      col.names = c("Frame", "n", "# Yes", "# No", "Proportion 'yes'"),
       caption = "Recommendation rates by framing condition")
 ```
 
+## Step 3 — Visualization
+
 ```{r exp3-plot, eval=exp3_ok}
 ggplot(exp3_summary, aes(x = group, y = prop_yes, fill = group)) +
-  geom_col(width = 0.55, alpha = 0.85) +
+  geom_col(width = 0.55, alpha = 0.9) +
   geom_text(aes(label = paste0(round(prop_yes * 100), "%")),
-            vjust = -0.4, size = 4.5) +
+            vjust = -0.4, size = 5, fontface = "bold") +
   scale_y_continuous(limits = c(0, 1.05), labels = percent_format()) +
-  scale_fill_manual(values = c("positive" = "#2a6f97", "negative" = "#c0392b")) +
+  scale_fill_manual(values = c("positive" = "#154734", "negative" = "#BD8B13")) +
   labs(x = "Framing condition", y = "Proportion who recommended treatment",
        title = "Recommendation rate by frame") +
   theme_minimal(base_size = 12) +
   theme(legend.position = "none")
 ```
+
+## Step 4 — Analysis
 
 ```{r exp3-test, eval=exp3_ok, results='asis'}
 n_pos <- sum(exp3_clean$group == "positive")
@@ -302,21 +1007,12 @@ yes_neg <- sum(exp3_clean$group == "negative" & exp3_clean$choice == "yes")
 
 test3 <- prop.test(x = c(yes_pos, yes_neg), n = c(n_pos, n_neg), correct = FALSE)
 
-# Two-proportion z statistic (manual, since prop.test gives chi-square)
 p_pos <- yes_pos / n_pos
 p_neg <- yes_neg / n_neg
 p_pool <- (yes_pos + yes_neg) / (n_pos + n_neg)
 se_pool <- sqrt(p_pool * (1 - p_pool) * (1/n_pos + 1/n_neg))
 z_stat <- (p_pos - p_neg) / se_pool
 
-cat("## Hypotheses\n\n")
-cat("$$H_0:\\ p_{\\text{positive}} - p_{\\text{negative}} = 0 \\qquad H_a:\\ p_{\\text{positive}} - p_{\\text{negative}} \\neq 0$$\n\n")
-
-cat("## Point estimate\n\n")
-cat(sprintf("$\\hat{p}_{\\text{positive}} - \\hat{p}_{\\text{negative}} = %.3f - %.3f = %.3f$\n\n",
-            p_pos, p_neg, p_pos - p_neg))
-
-cat("## Test results\n\n")
 res3 <- data.frame(
   Quantity = c("Test statistic (z)", "p-value",
                "95% CI lower", "95% CI upper"),
@@ -325,32 +1021,311 @@ res3 <- data.frame(
             round(test3$conf.int[1], 3),
             round(test3$conf.int[2], 3))
 )
-print(kable(res3))
-
-cat("\n\n## Interpretation\n\n")
-cat(sprintf("- The test statistic %.3f tells us how many standard errors the observed difference in sample proportions lies from zero.\n", z_stat))
-cat(sprintf("- The p-value of %s is the probability of seeing a difference at least this extreme if framing had no real effect on recommendations.\n", fmt_p(test3$p.value)))
-ci_includes_zero3 <- test3$conf.int[1] <= 0 & test3$conf.int[2] >= 0
-cat(sprintf("- We are 95%% confident that the true difference $p_{\\text{positive}} - p_{\\text{negative}}$ lies between %.3f and %.3f. ",
-            test3$conf.int[1], test3$conf.int[2]))
-if (ci_includes_zero3) {
-  cat("Because **0 falls inside** this interval, the data are consistent with framing having no effect on recommendations.\n\n")
-} else {
-  cat("Because **0 does not fall inside** this interval, we have evidence that the two framings produce different recommendation rates.\n\n")
-}
+print(kable(res3, caption = "Two-proportion z-test: positive vs. negative frame"))
 ```
 
-\newpage
+## SSVA Guiding Questions — Experiment 3
 
-# Discussion Questions for Students
+**Q1.** How many variables are there, and what type is each?
 
-For each experiment, work through these in groups:
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Two variables, and **both** are categorical: framing group (positive / negative) and choice (yes / no). This is different from Experiments 1 and 2, where the response was quantitative.
+</details>
+:::
 
-1. **Population vs. sample.** What population are we trying to make inferences about? In what ways might our sample fail to represent that population?
-2. **Random assignment vs. random sampling.** Which one(s) did this experiment use, and what does that allow us to conclude?
-3. **Hypotheses.** State $H_0$ and $H_a$ in plain English, then in symbols.
-4. **Point estimate vs. parameter.** What is the parameter? What is the point estimate? Why are they different?
-5. **Test statistic.** Explain what the value means in terms of standard errors.
-6. **p-value.** Interpret the p-value in context — *not* as "the probability the null is true."
-7. **Confidence interval.** Interpret the 95% CI in context. What does it mean that 0 is (or is not) in the interval?
-8. **Conclusion.** At the 5% significance level, do you reject $H_0$? What is your conclusion in the context of the experiment?
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q2.** What are the response and explanatory variables?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **Explanatory**: framing condition (positive vs. negative) — categorical.
+- **Response**: recommendation (yes vs. no) — categorical, binary. Because the response is binary, we summarize each group with a **proportion** rather than a mean.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q3.** What does the bar chart show? Which frame produced a higher recommendation rate?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Each bar shows the proportion of students in that framing group who said "yes." A taller bar means a higher recommendation rate. Compare the heights: the gap between the two bars is the observed difference in sample proportions, which is our point estimate for the true difference in population proportions.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q4.** For categorical data like this, we don't compute a mean and SD. What summary statistics *do* we use, and why?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+For a binary categorical variable, the relevant summaries are the **count** of each category and the **proportion** that falls in one category (e.g., "yes"). The proportion $\hat{p}$ plays the role of the mean for binary data — it's the average of 1s and 0s if you code yes = 1, no = 0. The variability is implicit in $\hat{p}(1-\hat{p})$, so we don't need to report an SD separately.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**Q5.** Based on SSVA alone, what is your initial conclusion about whether framing affects recommendations?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If the two proportions are noticeably different (e.g., 75% vs. 45%), SSVA suggests framing matters. If they're very close (e.g., 65% vs. 62%), SSVA suggests framing might not matter much. The test will tell us whether any observed gap is bigger than we'd expect by random chance alone.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+## Independent Conceptual Questions — Experiment 3
+
+**C1.** What is the statistical question?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Is the true proportion of students who would recommend the treatment different under positive framing compared to negative framing?
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C2.** What is the population of interest?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+All Cal Poly students who could plausibly take this course. (Broader populations like "all adults" or "all patients" require a much bigger generalization leap and are not well supported by a class-section sample.)
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C3.** What is the sample?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The students in this STAT 252 section who participated in the framing experiment.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C4.** What is the observational unit?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+An individual student.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+* * *
+:::
+
+**C5.** Describe all variables in the study.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+- **group** — categorical (positive / negative) — explanatory
+- **choice** — categorical binary (yes / no) — response
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C6.** What potential confounding variables exist?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Because the groups are formed by random assignment, most confounders balance out on average. But: students' prior exposure to the scenario, their personal experience with medical decisions, their reading speed (if some students didn't read the scenario carefully), and social influence if students near each other compared their scenarios before choosing. Random assignment handles most baseline differences but can't fully eliminate these situational factors.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C7.** Is this an experiment or an observational study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**Experiment.** Students were randomly assigned by the app to one of the two framing conditions — they did not choose which scenario to read.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C8.** What design improvements could enhance the study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Improvements: (1) prevent students from seeing each other's scenarios (physical separation or simultaneous reveal); (2) include additional framing conditions to test how the effect scales (e.g., 99% vs. 1%); (3) add follow-up questions to check whether students noticed the framing manipulation; (4) replicate across different medical scenarios to show the effect isn't specific to one context; (5) recruit a more diverse sample than a single class section.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C9.** State the null and alternative hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**In words:** $H_0$: the true proportion of students who recommend the treatment is the same under both framings. $H_a$: the true proportions differ.
+
+**In symbols:** $H_0:\ p_{\text{positive}} - p_{\text{negative}} = 0$ vs. $H_a:\ p_{\text{positive}} - p_{\text{negative}} \neq 0$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C10.** Based on the test statistic and p-value, what do you conclude about $H_0$?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If p < 0.05, reject $H_0$ — we have evidence that framing affects recommendation rates. If p ≥ 0.05, fail to reject — the data are consistent with no framing effect. State the conclusion in the context of the medical scenario.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
+
+**C11.** If the confidence interval were not given, could you infer whether 0 is inside it from the test decision?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Yes. If you rejected $H_0$ at the 5% level, the 95% CI for $p_{\text{positive}} - p_{\text{negative}}$ will not contain 0. If you failed to reject, it will contain 0. The test and the interval always agree.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+* * *
+:::
