@@ -69,6 +69,16 @@ section_check <- function(df, name) {
 }
 ```
 
+```{=html}
+<style>
+/* Add vertical breathing room before each guiding question paragraph */
+p:has(> strong:first-child) {
+  margin-top: 2.5em;
+  margin-bottom: 0.4em;
+}
+</style>
+```
+
 # How to Use This Workbook {.unnumbered}
 
 This workbook walks through three in-class experiments using the **SSVA framework** (Summary statistics → Visualization → Analysis). For each experiment we will:

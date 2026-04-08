@@ -304,10 +304,22 @@
 
 <!-- ============ STEP 1: SESSION INFO ============ -->
 <div class="card" id="sessionCard">
-  <h2>Step 1 — Session Info</h2>
-  <label for="sessionCode">Class session code (your instructor will tell you)</label>
-  <input type="text" id="sessionCode" placeholder="e.g., sec-08 or sec-09" autocomplete="off" />
-  <label for="experimentSelect">Which experiment are you doing?</label>
+  <h2>Step 1 — Enter Your Section</h2>
+  <div class="scenario">
+    <strong>Which section code is yours?</strong><br>
+    <span style="display:block;margin-top:8px;">
+      🕛 <strong>12–2 PM class</strong> → enter <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-08</code>
+    </span>
+    <span style="display:block;margin-top:6px;">
+      🕓 <strong>4–6 PM class</strong> → enter <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-09</code>
+    </span>
+    <span style="display:block;margin-top:10px;font-size:13px;color:#a82c1f;font-weight:700;">
+      ⚠️ Using the wrong code means your data will not be recorded for your class.
+    </span>
+  </div>
+  <label for="sessionCode">Your section code</label>
+  <input type="text" id="sessionCode" placeholder="sec-08 or sec-09" autocomplete="off" />
+  <label for="experimentSelect">Which experiment are you doing today?</label>
   <select id="experimentSelect">
     <option value="">— Select —</option>
     <option value="reaction">Experiment 1: Reaction Time (Two Means)</option>
@@ -320,10 +332,19 @@
 <!-- ============ EXPERIMENT 1: REACTION TIME ============ -->
 <div class="card hidden" id="exp1Card">
   <h2>Experiment 1 — Reaction Time</h2>
+  <div class="scenario">
+    <strong>What's happening:</strong> You've been randomly assigned to one of two conditions — <strong>music</strong> or <strong>silence</strong>. You'll complete 5 reaction-time trials. Your average reaction time (in milliseconds) will be submitted anonymously and pooled with the class to test whether listening to music affects reaction speed.
+  </div>
   <div id="exp1Group"></div>
   <div id="exp1Instructions">
     <div id="exp1Condition"></div>
     <p><strong>Your task:</strong> When the red box turns <span style="color:var(--good);font-weight:800">GREEN</span>, tap it as fast as you can. You'll do <strong>5 trials</strong>. We'll record your average.</p>
+    <ol>
+      <li>Read your assigned condition above carefully.</li>
+      <li>Set up your environment (headphones + music, or silence) <em>before</em> clicking Begin.</li>
+      <li>Keep your finger near the screen and stay focused — the green can appear at any moment.</li>
+      <li>After all 5 trials, tap <strong>Submit My Data</strong> to send your result to the class sheet.</li>
+    </ol>
     <button id="exp1StartBtn">Begin Trial 1 →</button>
   </div>
   <div id="exp1Trial" class="hidden">
@@ -342,7 +363,15 @@
 <div class="card hidden" id="exp2Card">
   <h2>Experiment 2 — Memory Recall</h2>
   <div id="exp2Intro">
-    <p>You'll see <strong>14 random digits</strong> for <strong>6 seconds</strong>. Try to remember them in order, then type what you remember. You'll do this <strong>twice</strong>.</p>
+    <div class="scenario">
+      <strong>What's happening:</strong> This is a <em>paired</em> experiment — you are your own comparison. You'll try to memorize 14 random digits <strong>twice</strong>: once without any strategy, and once using a <strong>chunking trick</strong>. The difference in your two scores is what gets analyzed. Everyone does both rounds, so there is no random group assignment here.
+    </div>
+    <ol>
+      <li><strong>Round 1:</strong> The digits appear for 6 seconds with no grouping. Memorize as many as you can.</li>
+      <li>Type what you remember — don't worry if it's not perfect.</li>
+      <li>Read the chunking tip, then attempt <strong>Round 2</strong> with the strategy applied.</li>
+      <li>After Round 2, tap <strong>Submit My Data</strong> to send both scores to the class sheet.</li>
+    </ol>
     <p class="small">Round 1 will feel hard. That's the point.</p>
     <button id="exp2StartBtn">Start Round 1 →</button>
   </div>
@@ -385,10 +414,13 @@
 <!-- ============ EXPERIMENT 3: FRAMING ============ -->
 <div class="card hidden" id="exp3Card">
   <h2>Experiment 3 — Medical Decision</h2>
+  <div class="scenario">
+    <strong>What's happening:</strong> You've been randomly assigned to read one of two versions of the same medical scenario — one describes the outcome as <strong>survival</strong>, the other as <strong>death</strong>. The statistics are identical; only the wording differs. Your yes/no response will be pooled with the class to test whether framing affects medical decision-making.
+  </div>
   <div id="exp3Group"></div>
   <div id="exp3Question">
     <div class="scenario" id="exp3Scenario"></div>
-    <p><strong>Would you recommend that the patient undergo this treatment?</strong></p>
+    <p><strong>Read the scenario carefully, then answer:</strong> Would you recommend that the patient undergo this treatment?</p>
     <div class="choice-row">
       <button class="yes" id="exp3Yes">YES</button>
       <button class="no" id="exp3No">NO</button>
