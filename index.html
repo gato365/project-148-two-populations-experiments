@@ -304,22 +304,40 @@
 
 <!-- ============ STEP 1: SESSION INFO ============ -->
 <div class="card" id="sessionCard">
-  <h2>Step 1 — Enter Your Section</h2>
+  <h2>Welcome — Read Before You Start</h2>
+
+  <!-- Section code box -->
   <div class="scenario">
-    <strong>Which section code is yours?</strong><br>
+    <strong>Step 1 — Find your section code:</strong><br>
     <span style="display:block;margin-top:8px;">
-      🕛 <strong>12–2 PM class</strong> → enter <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-08</code>
+      🕛 <strong>12–2 PM class</strong> → your code is <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-08</code>
     </span>
     <span style="display:block;margin-top:6px;">
-      🕓 <strong>4–6 PM class</strong> → enter <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-09</code>
+      🕓 <strong>4–6 PM class</strong> → your code is <code style="background:#e8f1ed;padding:2px 6px;border-radius:4px;font-weight:700;">sec-09</code>
     </span>
     <span style="display:block;margin-top:10px;font-size:13px;color:#a82c1f;font-weight:700;">
-      ⚠️ Using the wrong code means your data will not be recorded for your class.
+      ⚠️ Wrong code = your data will NOT be saved to your class. Double-check before submitting.
     </span>
   </div>
-  <label for="sessionCode">Your section code</label>
+
+  <!-- How it works box -->
+  <div style="background:#f0f4f2;border:2px solid var(--cp-green);border-radius:10px;padding:16px;margin-top:14px;">
+    <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--cp-green);margin-bottom:10px;">Step 2 — How this works</div>
+    <p style="margin:0 0 10px;font-size:15px;">There are <strong>3 experiments</strong> today. You must complete <strong>all three</strong>, one at a time:</p>
+    <ol style="margin:0;padding-left:20px;font-size:15px;line-height:1.8;">
+      <li>Enter your section code (<code>sec-08</code> or <code>sec-09</code>) in the box below.</li>
+      <li>Select <strong>Experiment 1</strong> from the dropdown and click <strong>Start</strong>.</li>
+      <li>Complete the experiment and hit <strong>Submit My Data</strong>.</li>
+      <li>The page will reset — come back here and repeat with <strong>Experiment 2</strong>, then <strong>Experiment 3</strong>.</li>
+    </ol>
+    <p style="margin:12px 0 0;font-size:13px;background:#fff3cd;border-radius:6px;padding:8px 10px;border-left:4px solid var(--cp-gold);font-weight:600;">
+      Each experiment is done <strong>once and only once</strong>. Re-submitting will corrupt the class data.
+    </p>
+  </div>
+
+  <label for="sessionCode" style="margin-top:20px;">Your section code</label>
   <input type="text" id="sessionCode" placeholder="sec-08 or sec-09" autocomplete="off" />
-  <label for="experimentSelect">Which experiment are you doing today?</label>
+  <label for="experimentSelect">Which experiment are you starting now?</label>
   <select id="experimentSelect">
     <option value="">— Select —</option>
     <option value="reaction">Experiment 1: Reaction Time (Two Means)</option>
