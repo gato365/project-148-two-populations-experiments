@@ -20,8 +20,18 @@ A one-time, ~15-minute setup. After this, every class is just: share the URL →
 7. The first time, Google will ask you to authorize. Click **Authorize access** → pick your account → it'll warn the app is unverified → click **Advanced → Go to [project name] (unsafe)**. (It's your own script. Safe.)
 8. Copy the **Web app URL** it gives you. It looks like:
    `https://script.google.com/macros/s/AKfycbx...long.../exec`
+
+[Real Web App](https://script.google.com/macros/s/AKfycbxAUJsWI_yrLN9tfij5mN6gliwt2uWTXYC6cxqewDV4tYF-7QibShAF-bu-tPZ7KsM3/exec)
+
+
+[Just in case, deployment id](AKfycbxAUJsWI_yrLN9tfij5mN6gliwt2uWTXYC6cxqewDV4tYF-7QibShAF-bu-tPZ7KsM3)
+
+
 9. Also grab the **Sheet ID** from your Sheet's URL — the long string between `/d/` and `/edit`:
    `https://docs.google.com/spreadsheets/d/`**`THIS_PART_IS_THE_ID`**`/edit`
+
+[Real Sheet ID](12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0)
+
 
 Keep both of these handy.
 
