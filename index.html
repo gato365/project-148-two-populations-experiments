@@ -253,6 +253,41 @@
     padding: 12px 0;
   }
   .score-display strong { color: var(--cp-green); }
+
+  .condition-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    margin: 14px 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+    border: 3px solid;
+  }
+  .condition-banner .cond-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+  }
+  .condition-banner.music {
+    background: #e8f1ed;
+    color: var(--cp-green-dark);
+    border-color: var(--cp-green);
+  }
+  .condition-banner.silence {
+    background: #fce8e6;
+    color: #6b1a10;
+    border-color: var(--bad);
+  }
+  .condition-banner .cond-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    opacity: 0.75;
+  }
 </style>
 </head>
 <body>
@@ -287,8 +322,8 @@
   <h2>Experiment 1 — Reaction Time</h2>
   <div id="exp1Group"></div>
   <div id="exp1Instructions">
+    <div id="exp1Condition"></div>
     <p><strong>Your task:</strong> When the red box turns <span style="color:var(--good);font-weight:800">GREEN</span>, tap it as fast as you can. You'll do <strong>5 trials</strong>. We'll record your average.</p>
-    <p class="small" id="exp1Condition"></p>
     <button id="exp1StartBtn">Begin Trial 1 →</button>
   </div>
   <div id="exp1Trial" class="hidden">
@@ -447,9 +482,25 @@ function initExp1() {
   exp1State.group = Math.random() < 0.5 ? "A" : "B";
   const groupName = exp1State.group === "A" ? "MUSIC" : "SILENCE";
   $("exp1Group").innerHTML = `<span class="group-badge group-${exp1State.group}">Group ${exp1State.group}: ${groupName}</span>`;
-  $("exp1Condition").textContent = exp1State.group === "A"
-    ? "Put on headphones and play music you enjoy at a comfortable volume before you begin."
-    : "Make sure your environment is silent — no music, no headphones — before you begin.";
+  if (exp1State.group === "A") {
+    $("exp1Condition").innerHTML = `
+      <div class="condition-banner music">
+        <div class="cond-icon">🎵</div>
+        <div>
+          <div class="cond-label">Your condition: Music</div>
+          Put on headphones and play music you enjoy at a comfortable volume <strong>before you begin the trials</strong>. Keep it playing the whole time.
+        </div>
+      </div>`;
+  } else {
+    $("exp1Condition").innerHTML = `
+      <div class="condition-banner silence">
+        <div class="cond-icon">🔇</div>
+        <div>
+          <div class="cond-label">Your condition: Silence</div>
+          <strong>No music. No headphones.</strong> Make sure your environment is completely silent before you begin the trials. Keep it silent the whole time.
+        </div>
+      </div>`;
+  }
 }
 
 $("exp1StartBtn").addEventListener("click", () => {
